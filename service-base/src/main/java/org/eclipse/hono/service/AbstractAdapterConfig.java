@@ -134,6 +134,8 @@ public abstract class AbstractAdapterConfig {
         // empty by default
     }
 
+    private HonoClientImpl messagingClient;
+
     /**
      * Exposes a client for the <em>Hono Messaging</em> component as a Spring bean.
      * <p>
@@ -145,7 +147,12 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public HonoClient messagingClient() {
-        return new HonoClientImpl(vertx(), messagingClientConfig());
+        // TODO Hack to reuse the same messaging client for both the adapter and the 
+        // ConnectionEventProducer instance defined in the adapter config file.
+        if (messagingClient == null) {
+            messagingClient = new HonoClientImpl(vertx(), messagingClientConfig());
+        }
+        return messagingClient;
     }
 
     /**
@@ -177,6 +184,8 @@ public abstract class AbstractAdapterConfig {
         // empty by default
     }
 
+    private HonoClientImpl registrationServiceClient;
+
     /**
      * Exposes a client for the <em>Device Registration</em> API as a Spring bean.
      *
@@ -186,15 +195,16 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public HonoClient registrationServiceClient() {
-        final HonoClientImpl result =
-                new HonoClientImpl(vertx(), registrationServiceClientConfig());
-
-        final CacheProvider cacheProvider = registrationCacheProvider();
-        if (cacheProvider != null) {
-            result.setCacheProvider(cacheProvider);
+        // TODO Hack to reuse the same registration client for both the adapter and the 
+        // ConnectionEventProducer instance defined in the adapter config file.
+        if (registrationServiceClient == null) {
+            registrationServiceClient = new HonoClientImpl(vertx(), registrationServiceClientConfig());
+            final CacheProvider cacheProvider = registrationCacheProvider();
+            if (cacheProvider != null) {
+                registrationServiceClient.setCacheProvider(cacheProvider);
+            }
         }
-
-        return result;
+        return registrationServiceClient;
     }
 
     /**
