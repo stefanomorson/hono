@@ -69,11 +69,14 @@
                     <ports>
                       <port>1883</port>
                       <port>8883</port>
+                      <port>5005</port>
                       <port>${vertx.health.port}</port>
                     </ports>
                     <cmd>
                       <exec>
                         <arg>java</arg>
+                        <arg>-Xdebug</arg>
+                        <arg>-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n</arg>
                         <arg>--illegal-access=permit</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-Dloader.home=/opt/hono</arg>

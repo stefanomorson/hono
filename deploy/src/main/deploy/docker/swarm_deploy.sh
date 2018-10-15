@@ -19,6 +19,40 @@ CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
+
+# Start push images local to local registry
+echo DEPLOYING DOCKER REGISTRY FOR LOCAL IMAGES
+echo
+echo You may need set an insecure registry entry in your local docker deamon configuration e.g. localhost:5000
+echo
+docker run -d -p 5000:5000 --name registry registry:2
+
+docker tag ${docker.image.org-name}/hono-service-auth:${project.version} localhost:5000/${docker.image.org-name}/hono-service-auth:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-service-auth:${project.version}
+
+docker tag ${docker.image.org-name}/hono-service-device-registry:${project.version} localhost:5000/${docker.image.org-name}/hono-service-device-registry:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-service-device-registry:${project.version}
+
+docker tag ${docker.image.org-name}/hono-service-messaging:${project.version} localhost:5000/${docker.image.org-name}/hono-service-messaging:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-service-messaging:${project.version}
+
+docker tag ${docker.image.org-name}/hono-adapter-http-vertx:${project.version} localhost:5000/${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
+
+docker tag ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version} localhost:5000/${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
+
+docker tag ${docker.image.org-name}/hono-adapter-kura:${project.version} localhost:5000/${docker.image.org-name}/hono-adapter-kura:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-adapter-kura:${project.version}
+
+docker tag ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version} localhost:5000/${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
+
+docker tag ${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version} localhost:5000/${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}
+docker push localhost:5000/${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}
+
+# End push local images to local registry
+
 DEPLOY_ADAPTERS=YES
 COAP_ENABLED=NO
 
@@ -145,7 +179,8 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-service-auth:${project.version}
+  --env _JAVA_OPTIONS=-Xmx32m \
+  localhost:5000/${docker.image.org-name}/hono-service-auth:${project.version}
 echo ... done
 
 echo
@@ -179,7 +214,7 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
-  ${docker.image.org-name}/hono-service-device-registry:${project.version}
+  localhost:5000/${docker.image.org-name}/hono-service-device-registry:${project.version}
 
 if [ $DEPLOY_ADAPTERS = "YES" ]
 then
@@ -199,7 +234,8 @@ docker service create $CREATE_OPTIONS --name hono-service-messaging -p 5671:5671
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
-  ${docker.image.org-name}/hono-service-messaging:${project.version}
+  --env _JAVA_OPTIONS=-Xmx196m \
+  localhost:5000/${docker.image.org-name}/hono-service-messaging:${project.version}
 echo ... done
 
 echo
@@ -208,7 +244,7 @@ docker secret create -l project=$NS http-adapter-key.pem $CERTS/http-adapter-key
 docker secret create -l project=$NS http-adapter-cert.pem $CERTS/http-adapter-cert.pem
 docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../http-adapter.credentials
 docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
+docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 -p 5006:5005 \
   --secret http-adapter-key.pem \
   --secret http-adapter-cert.pem \
   --secret trusted-certs.pem \
@@ -219,7 +255,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
+  --env _JAVA_OPTIONS=-Xmx128m \
+  localhost:5000/${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
 echo ... done
 
 echo
@@ -228,7 +265,7 @@ docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key
 docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
 docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
+docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 -p 5005:5005 \
   --secret mqtt-adapter-key.pem \
   --secret mqtt-adapter-cert.pem \
   --secret trusted-certs.pem \
@@ -239,7 +276,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
+  --env _JAVA_OPTIONS=-Xmx128m \
+  localhost:5000/${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
 echo ... done
 
 echo
@@ -259,7 +297,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 4040:567
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-amqp-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}
+  localhost:5000/${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}
 echo ... done
 
 echo
@@ -279,7 +317,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-adapter-kura:${project.version}
+  --env _JAVA_OPTIONS=-Xmx128m \
+  localhost:5000/${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
 
 if [ $COAP_ENABLED = "YES" ]; then
@@ -301,7 +340,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:568
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
+  localhost:5000/${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
 echo ... done
 fi
 

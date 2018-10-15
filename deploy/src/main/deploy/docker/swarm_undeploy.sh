@@ -112,3 +112,13 @@ docker network rm $NS
 # we are not removing the device-registry volume so that we can leverage the existing data the next time Hono is deployed
 
 echo ECLIPSE HONO UNDEPLOYED FROM DOCKER SWARM
+
+# Start undeploying local registry
+echo UNDEPLOYING DOCKER REGISTRY FOR LOCAL IMAGES
+
+docker stop registry 
+sleep 5
+docker rm -f registry
+
+echo DOCKER REGISTRY UNDEPLOYED
+# End undeploying local registry
