@@ -49,6 +49,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonLink;
+import io.vertx.proton.ProtonLinkOptions;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -399,11 +400,15 @@ public abstract class AbstractHonoClient {
         Objects.requireNonNull(messageHandler);
 
         return HonoProtonHelper.executeOrRunOnContext(ctx, result -> {
-            final ProtonReceiver receiver = con.createReceiver(sourceAddress);
+            final ProtonLinkOptions opt = new ProtonLinkOptions();
+            opt.setLinkName(clientConfig.getName());
+            LOG.warn("##### Setting the link name to '{}'", opt.getLinkName());
+            final ProtonReceiver receiver = con.createReceiver(sourceAddress, opt);
             receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.FALSE);
             receiver.setAutoAccept(true);
             receiver.setQoS(qos);
             receiver.setPrefetch(clientConfig.getInitialCredits());
+            LOG.warn("##### Set the link name to '{}'", receiver.getName());
             receiver.handler((delivery, message) -> {
                 messageHandler.handle(delivery, message);
                 if (LOG.isTraceEnabled()) {
